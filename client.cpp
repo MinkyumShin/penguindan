@@ -24,7 +24,7 @@ string send_request_to_server(const string& op, const string& id, const string& 
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         return "error: WSAStartup failed";
-    }
+    } 
 #endif
 
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -74,6 +74,5 @@ string send_request_to_server(const string& op, const string& id, const string& 
 #ifdef _WIN32
     WSACleanup();
 #endif
-
     return response;
 }
