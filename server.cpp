@@ -9,7 +9,8 @@
 
 #ifdef _WIN32
 #include<WinSock2.h>
-#pragma comment(lib, "w2s_32.lib")
+#pragma comment(lib, "ws2_32.lib")
+typedef int socklen_t;
 #else
 #include <sys/socket.h>
 #include <arap/inet.h>
@@ -99,5 +100,49 @@ int main() {
 	load_users();
 
 	SOCKET server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (server_socket == INVALID_SOCKET) {
+		cerr << "소켓 생성 실패" << '\n';
+		return 1;
+	}
 
+
+	sockaddr_in server_addr{};
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = INADDR_ANY; // 모든 IP에서 수신
+	server_addr.sin_port = htons(1234); // 포트 설정
+
+	if (bind(server_socket, (sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+		cerr << "Bind failed." << '\n';
+		return 1;
+	}
+
+	if (listen(server_socket, SOMAXCONN) < 0) {
+		cerr << "Listen failed." << endl;
+		return 1;
+	}
+
+	cout << "Server is running and waiting for connections..." << endl;
+
+	while (true) {
+		sockaddr_in client_addr{};
+		socklen_t client_size = sizeof(client_addr);
+
+		SOCKET client_socket = accept(server_socket, (sockaddr*)&client_addr, &client_size);
+		if (client_socket == INVALID_SOCKET) {
+			cerr << "Accept failed." << endl;
+			continue;
+		}
+
+		// 클라이언트 처리 스레드 생성
+		thread client_thread(handle_client, client_socket);
+		client_thread.detach(); // 독립 실행
+	}
+
+#ifdef _WIN32
+	WSACleanup();
+#else
+	close(server_socket);
+#endif
+
+	return 0;
 }
