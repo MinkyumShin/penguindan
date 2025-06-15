@@ -1,3 +1,4 @@
+//gcc main.c -o main.out $(pkg-config --cflags --libs gtk+-3.0)
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <stdlib.h>
