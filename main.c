@@ -75,26 +75,13 @@ static void on_register_clicked(GtkButton *button, gpointer _){
     const char *u = gtk_entry_get_text(GTK_ENTRY(entry_username));
     const char *p = gtk_entry_get_text(GTK_ENTRY(entry_password));
 
-    FILE *f = fopen("users.txt","r");
-    if (f){
-        char uu[32], pp[32];
-        while (fscanf(f,"%31s %31s", uu, pp)!=EOF){
-            if (!strcmp(uu,u)){
-                gtk_label_set_text(GTK_LABEL(label_message),"이미 존재하는 아이디입니다.");
-                fclose(f);
-                return;
-            }
-        }
-        fclose(f);
-    }
-    f = fopen("users.txt","a");
-    if (!f){
-        gtk_label_set_text(GTK_LABEL(label_message),"파일 쓰기 실패");
-        return;
-    }
-    fprintf(f,"%s %s\n",u,p);
-    fclose(f);
-    gtk_label_set_text(GTK_LABEL(label_message),"회원가입 성공!");
+    const char *resp = send_request("register", u, p);
+    if(!strcmp(resp, "success"))
+          gtk_label_set_text(GTK_LABEL(label_message), "회원가입 성공!");
+    else if (!strcmp(resp, "exists"))
+          gtk_label_set_text(GTK_LABEL(label_message), "이미 존재하는 아이디입니다.");
+    else
+          gtk_label_set_text(GTK_LABEL(label_message), "서버 오류 또는 네트워크 문제");
 }
 
 /* ─── 로그인 ─── */
@@ -102,25 +89,19 @@ static void on_login_clicked(GtkButton *button, gpointer _){
     const char *u = gtk_entry_get_text(GTK_ENTRY(entry_username));
     const char *p = gtk_entry_get_text(GTK_ENTRY(entry_password));
 
-    FILE *f = fopen("users.txt","r");
-    if (!f){
-        gtk_label_set_text(GTK_LABEL(label_message),"사용자 데이터 없음");
-        return;
+    if(!strcmp(resp, "success")) {
+        strncpy(current_user, u, sizeof(current_user)-1);
+        current_user[sizeof(current_user)-1]='\0';
+        GtkWidget *win = gtk_widget_get_toplevel(GTK_WIDGET(button));
+        gtk_widget_destroy(win);
+        show_mode_selection(global_app);
     }
-    char uu[32], pp[32];
-    while (fscanf(f,"%31s %31s",uu,pp)!=EOF){
-        if (!strcmp(uu,u) && !strcmp(pp,p)){
-            fclose(f);
-            strncpy(current_user, u, sizeof(current_user)-1);
-            current_user[sizeof(current_user)-1]='\0';
-            GtkWidget *win = gtk_widget_get_toplevel(GTK_WIDGET(button));
-            gtk_widget_destroy(win);
-            show_mode_selection(global_app);
-            return;
-        }
-    }
-    fclose(f);
-    gtk_label_set_text(GTK_LABEL(label_message),"로그인 실패: 아이디 또는 비밀번호 틀림");
+    else if (!strcmp(resp, "cannot_find_id"))
+        gtk_label_set_text(GTK_LABEL(label_message), "로그인 실패: 아이디가 없습니다.");
+    else if (!strcmp(resp, "not_match_pw"))
+        gtk_label_set_text(GTK_LABEL(label_message), "로그인 실패: 비밀번호가 틀립니다.");
+    else
+        gtk_label_set_text(GTK_LABEL(label_message), "서버 오류 또는 네트워크 문제");
 }
 
 /* ─── 모드 선택 ─── */
